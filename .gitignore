@@ -9,3 +9,6 @@
 
 # Python cache files
 scrub_jenkins_jobs/__pycache__
+
+# Python virtual environments
+venv*
