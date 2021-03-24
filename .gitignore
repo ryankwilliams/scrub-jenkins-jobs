@@ -1,0 +1,11 @@
+# Visual Studio Code
+.vscode
+
+# Python packaging
+*.egg-info
+
+# Python compiled files
+*.pyc
+
+# Python cache files
+scrub_jenkins_jobs/__pycache__
