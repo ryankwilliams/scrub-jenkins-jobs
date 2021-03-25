@@ -6,6 +6,7 @@ setuptools.setup(
     author="Ryan Williams",
     description="A utility to remove stale Jenkins jobs",
     url="https://github.com/ryankwilliams/scrub-jenkins-jobs",
+    packages=setuptools.find_packages(),
     install_requires=[
         "click",
         "python-jenkins",
