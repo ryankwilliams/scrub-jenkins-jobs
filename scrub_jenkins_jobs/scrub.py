@@ -143,12 +143,13 @@ class ScrubJobs:
     @silence_warnings
     def delete_jobs(self):
         """Deletes jenkins jobs that exceed the maximum number of days."""
+        print(f"Jenkins jobs last built {self.max_days} days ago")
         for job in self.jobs:
             job_name = job['name']
             days_since_last_build = job['daysSinceLastBuild']
 
             if days_since_last_build > self.max_days:
-                print(f"{job_name}\n  > Last built {days_since_last_build} days ago")
+                print(f"({days_since_last_build} days) - {job_name}")
                 if not self.dry_run:
                     # self.connection.delete_job(job_name)
                     print(f"Job: {job_name} deleted!")
@@ -157,10 +158,6 @@ class ScrubJobs:
         """Scrubs the jenkins server for jobs to be purged."""
         self.calculate_days_since_last_job_build()
         self.delete_jobs()
-        # self.get_jobs()
-        # for job in self.jobs:
-        #     print(job)
-        # print(f"Total jobs: {len(self.jobs)}")
 
 
 @click.command()
