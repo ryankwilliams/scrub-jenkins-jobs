@@ -117,6 +117,16 @@ class ScrubJobs:
 
         return matched_jobs
 
+    def sort_jobs_by_days_since_last_build(self):
+        """Sort jobs based on days since last build."""
+        job_count = len(self.jobs)
+        for index in range(job_count - 1):
+            for index2 in range(0, job_count - index - 1):
+                if self.jobs[index2]['daysSinceLastBuild'] > \
+                        self.jobs[index2 + 1]['daysSinceLastBuild']:
+                    self.jobs[index2], self.jobs[index2 + 1] = \
+                        self.jobs[index2 + 1], self.jobs[index2]
+
     @silence_warnings
     def calculate_days_since_last_job_build(self):
         """Calculates the number of days since a jobs last build.
@@ -173,6 +183,7 @@ class ScrubJobs:
     def scrub(self):
         """Scrubs the jenkins server for jobs to be purged."""
         self.calculate_days_since_last_job_build()
+        self.sort_jobs_by_days_since_last_build()
         self.delete_jobs()
 
 
