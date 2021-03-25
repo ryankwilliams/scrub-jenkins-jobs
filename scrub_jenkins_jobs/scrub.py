@@ -32,7 +32,7 @@ class ScrubJobs:
 
     def __init__(self, url, username, password, ssl_verify=constants.SSL_VERIFY,
                  dry_run=constants.DRY_RUN, max_days=constants.MAX_DAYS, regex_ignore_jobs=(),
-                 ignore_jobs=(), config_file=constants.CONFIG_FILE):
+                 ignore_jobs=(), config_file=constants.CONFIG_FILE, only_jobs=()):
         """Constructor.
 
         When a object is instantiated from the class, a connection to the jenkins
@@ -46,6 +46,7 @@ class ScrubJobs:
         :param int max_days: maximum number of days a job can stick around for
         :param tuple regex_ignore_jobs: regular expressions to ignore matching jobs
         :param tuple ignore_jobs: ignore jobs from being matched
+        :param tuple only_jobs: exact jobs to scrub (overrides all other filters)
         """
         self.connection = jenkins.Jenkins(url, username, password)
         self.connection._session.verify = ssl_verify
@@ -58,6 +59,7 @@ class ScrubJobs:
 
         self.regex_ignore_jobs = list(regex_ignore_jobs)
         self.ignore_jobs = list(ignore_jobs)
+        self.only_jobs = list(only_jobs)
 
         self.load_config()
 
@@ -77,10 +79,24 @@ class ScrubJobs:
             if item not in self.ignore_jobs:
                 self.ignore_jobs.append(item)
 
+        for item in config.get('only_jobs', []):
+            if item not in self.only_jobs:
+                self.only_jobs.append(item)
+
     @silence_warnings
     def get_jobs(self):
         """Gets all jenkins jobs based on provided filtering."""
         matched_jobs = []
+
+        for only_job in self.only_jobs:
+            try:
+                job = self.connection.get_job_info(only_job)
+                matched_jobs.append(job)
+            except jenkins.JenkinsException:
+                continue
+
+        if len(matched_jobs) >= 1:
+            return matched_jobs
 
         for job in self.connection.get_jobs():
             keep = False
@@ -180,13 +196,19 @@ class ScrubJobs:
 )
 @click.option(
     "--ignore-job",
-    help="Ignore job from being analyzed",
+    help="Filter to ignore job",
+    required=False,
+    multiple=True
+)
+@click.option(
+    "--job",
+    help="Filter to only analyze this job (overrides all filters)",
     required=False,
     multiple=True
 )
 @click.option(
     "--regex-ignore-job",
-    help="Ignore jobs matching the regex",
+    help="Filter to ignore jobs matching regex",
     required=False,
     multiple=True
 )
@@ -204,7 +226,7 @@ class ScrubJobs:
     is_flag=True
 )
 def cli(jenkins_url, jenkins_username, jenkins_password, config_file, dry_run, ignore_job,
-        regex_ignore_job, max_days, ssl_verify):
+        job, regex_ignore_job, max_days, ssl_verify):
     """Scrub Jenkins Jobs"""
     scrub_jobs = ScrubJobs(
         jenkins_url,
@@ -215,7 +237,8 @@ def cli(jenkins_url, jenkins_username, jenkins_password, config_file, dry_run, i
         max_days=max_days,
         regex_ignore_jobs=regex_ignore_job,
         ignore_jobs=ignore_job,
-        config_file=config_file
+        config_file=config_file,
+        only_jobs=job
     )
 
     if dry_run:
