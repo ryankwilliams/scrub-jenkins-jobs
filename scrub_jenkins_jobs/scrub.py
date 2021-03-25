@@ -21,7 +21,20 @@ def silence_warnings(func):
 
 
 class ScrubJobs(object):
+    """A class handling everything related to scrubbing jenkins jobs"""
+
     def __init__(self, url, username, password, ssl_verify=True, dry_run=True):
+        """Constructor.
+
+        When a object is instantiated from the class, a connection to the jenkins
+        server will be established.
+
+        :param str url: jenkins url
+        :param str username: jenkins username for login
+        :param str password: jenkins password for login
+        :param bool ssl_verify: toggles ssl verification on/off
+        :param bool dry_run: toggles dry run mode on/off
+        """
         self.connection = jenkins.Jenkins(url, username, password)
         self.connection._session.verify = ssl_verify
         self.todays_date = datetime.date.fromtimestamp(time.time())
@@ -32,6 +45,11 @@ class ScrubJobs(object):
 
     @silence_warnings
     def calculate_days_since_last_job_build(self):
+        """Calculates the number of days since a jobs last build.
+
+        Default behavior will get all jobs from jenkins and determine
+        the number of days since their last build.
+        """
         all_jobs = self.connection.get_jobs()
         for job in all_jobs:
             job_name = job['name']
@@ -67,6 +85,7 @@ class ScrubJobs(object):
 
     @silence_warnings
     def delete_jobs(self):
+        """Deletes jenkins jobs that exceed the maximum number of days."""
         for index, job in enumerate(self.jobs, start=1):
             job_name = job['name']
             days_since_last_build = job['daysSinceLastBuild']
@@ -79,6 +98,7 @@ class ScrubJobs(object):
                     print(f"Job: {job_name} deleted!")
 
     def scrub(self):
+        """Scrubs the jenkins server for jobs to be purged."""
         self.calculate_days_since_last_job_build()
         self.delete_jobs()
 
