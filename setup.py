@@ -8,7 +8,8 @@ setuptools.setup(
     url="https://github.com/ryankwilliams/scrub-jenkins-jobs",
     install_requires=[
         "click",
-        "python-jenkins"
+        "python-jenkins",
+        "pyyaml"
     ],
     python_requires=">=3.6",
     classifiers=[
