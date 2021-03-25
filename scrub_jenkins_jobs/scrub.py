@@ -9,6 +9,10 @@ import warnings
 import click
 import jenkins
 
+DRY_RUN = False
+MAX_DAYS = 30
+SSL_VERIFY = False
+
 
 def silence_warnings(func):
     """Decorator to silence warning messages."""
@@ -25,7 +29,8 @@ def silence_warnings(func):
 class ScrubJobs:
     """A class handling everything related to scrubbing jenkins jobs"""
 
-    def __init__(self, url, username, password, ssl_verify=True, dry_run=True):
+    def __init__(self, url, username, password, ssl_verify=SSL_VERIFY, dry_run=DRY_RUN,
+                 max_days=MAX_DAYS):
         """Constructor.
 
         When a object is instantiated from the class, a connection to the jenkins
@@ -36,6 +41,7 @@ class ScrubJobs:
         :param str password: jenkins password for login
         :param bool ssl_verify: toggles ssl verification on/off
         :param bool dry_run: toggles dry run mode on/off
+        :param int max_days: maxmium number of days a job can stick around for
         """
         self.connection = jenkins.Jenkins(url, username, password)
         self.connection._session.verify = ssl_verify
@@ -43,7 +49,7 @@ class ScrubJobs:
         self.dry_run = dry_run
 
         self.jobs = []
-        self.max_days = 30
+        self.max_days = max_days
 
     @silence_warnings
     def calculate_days_since_last_job_build(self):
@@ -110,27 +116,34 @@ class ScrubJobs:
 @click.argument("jenkins-username", nargs=1)
 @click.argument("jenkins-password", nargs=1)
 @click.option(
-    "--ssl-verify",
-    default=False,
-    help="Disable SSL verification",
-    required=False,
-    is_flag=True
-)
-@click.option(
     "--dry-run",
-    default=False,
+    default=DRY_RUN,
     help="Simulates the actions that would be taken",
     required=False,
     is_flag=True
 )
-def cli(jenkins_url, jenkins_username, jenkins_password, ssl_verify, dry_run):
+@click.option(
+    "--max-days",
+    default=MAX_DAYS,
+    help="Maximum number of days a job can stick around",
+    required=False
+)
+@click.option(
+    "--ssl-verify",
+    default=SSL_VERIFY,
+    help="Disable SSL verification",
+    required=False,
+    is_flag=True
+)
+def cli(jenkins_url, jenkins_username, jenkins_password, dry_run, max_days, ssl_verify):
     """Scrub Jenkins Jobs"""
     scrub_jobs = ScrubJobs(
         jenkins_url,
         jenkins_username,
         jenkins_password,
         ssl_verify=ssl_verify,
-        dry_run=dry_run
+        dry_run=dry_run,
+        max_days=max_days
     )
 
     if dry_run:
