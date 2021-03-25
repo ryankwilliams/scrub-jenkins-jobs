@@ -1,3 +1,5 @@
+"""Scrub module"""
+
 import datetime
 import functools
 import logging
@@ -20,7 +22,7 @@ def silence_warnings(func):
     return wrapper
 
 
-class ScrubJobs(object):
+class ScrubJobs:
     """A class handling everything related to scrubbing jenkins jobs"""
 
     def __init__(self, url, username, password, ssl_verify=True, dry_run=True):
@@ -86,7 +88,7 @@ class ScrubJobs(object):
     @silence_warnings
     def delete_jobs(self):
         """Deletes jenkins jobs that exceed the maximum number of days."""
-        for index, job in enumerate(self.jobs, start=1):
+        for job in self.jobs:
             job_name = job['name']
             days_since_last_build = job['daysSinceLastBuild']
 
@@ -135,7 +137,3 @@ def cli(jenkins_url, jenkins_username, jenkins_password, ssl_verify, dry_run):
         print("-- (Simulation Mode) --")
 
     scrub_jobs.scrub()
-
-
-if __name__ == "__main__":
-    cli()
