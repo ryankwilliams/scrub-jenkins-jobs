@@ -1,5 +1,7 @@
 # Scrub Jenkins Jobs
 
+[![PR-Verification](https://github.com/ryankwilliams/scrub-jenkins-jobs/actions/workflows/pr_verification.yml/badge.svg)](https://github.com/ryankwilliams/scrub-jenkins-jobs/actions/workflows/pr_verification.yml)
+
 A simple command to clean 'scrub' Jenkins jobs.
 
 ## Install
