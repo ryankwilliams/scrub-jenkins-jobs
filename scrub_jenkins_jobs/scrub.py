@@ -167,8 +167,8 @@ class ScrubJobs:
             if days_since_last_build > self.max_days:
                 print(f"({days_since_last_build} days) - {job_name}")
                 if not self.dry_run:
-                    # self.connection.delete_job(job_name)
-                    print(f"Job: {job_name} deleted!")
+                    self.connection.delete_job(job_name)
+                    print(f"Deleted - {job_name}")
 
     def scrub(self):
         """Scrubs the jenkins server for jobs to be purged."""
