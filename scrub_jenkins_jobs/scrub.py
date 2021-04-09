@@ -3,15 +3,12 @@
 import datetime
 import functools
 import logging
-import re
 import time
 import warnings
 
 import click
 import jenkins
-import yaml
 
-from scrub_jenkins_jobs import click_callbacks
 from scrub_jenkins_jobs import constants
 
 
@@ -30,9 +27,8 @@ def silence_warnings(func):
 class ScrubJobs:
     """A class handling everything related to scrubbing jenkins jobs"""
 
-    def __init__(self, url, username, password, ssl_verify=constants.SSL_VERIFY,
-                 dry_run=constants.DRY_RUN, max_days=constants.MAX_DAYS, regex_ignore_jobs=(),
-                 ignore_jobs=(), config_file=constants.CONFIG_FILE, only_jobs=()):
+    def __init__(self, url, username, password, regex, ssl_verify=constants.SSL_VERIFY,
+                 dry_run=constants.DRY_RUN, max_days=constants.MAX_DAYS):
         """Constructor.
 
         When a object is instantiated from the class, a connection to the jenkins
@@ -41,12 +37,10 @@ class ScrubJobs:
         :param str url: jenkins url
         :param str username: jenkins username for login
         :param str password: jenkins password for login
+        :param str regex: regular expression for exact jobs to scrub
         :param bool ssl_verify: toggles ssl verification on/off
         :param bool dry_run: toggles dry run mode on/off
         :param int max_days: maximum number of days a job can stick around for
-        :param tuple regex_ignore_jobs: regular expressions to ignore matching jobs
-        :param tuple ignore_jobs: ignore jobs from being matched
-        :param tuple only_jobs: exact jobs to scrub (overrides all other filters)
         """
         self.connection = jenkins.Jenkins(url, username, password)
         self.connection._session.verify = ssl_verify
@@ -55,67 +49,12 @@ class ScrubJobs:
 
         self.jobs = []
         self.max_days = max_days
-        self.config_file = config_file
-
-        self.regex_ignore_jobs = list(regex_ignore_jobs)
-        self.ignore_jobs = list(ignore_jobs)
-        self.only_jobs = list(only_jobs)
-
-        self.load_config()
-
-    def load_config(self):
-        """Load configuration file."""
-        if self.config_file is None:
-            return
-
-        with open(self.config_file, "r") as stream:
-            config = yaml.load(stream, Loader=yaml.FullLoader)
-
-        for item in config.get('regex_ignore_jobs', []):
-            if item not in self.regex_ignore_jobs:
-                self.regex_ignore_jobs.append(item)
-
-        for item in config.get('ignore_jobs', []):
-            if item not in self.ignore_jobs:
-                self.ignore_jobs.append(item)
-
-        for item in config.get('only_jobs', []):
-            if item not in self.only_jobs:
-                self.only_jobs.append(item)
+        self.regex = regex
 
     @silence_warnings
     def get_jobs(self):
         """Gets all jenkins jobs based on provided filtering."""
-        matched_jobs = []
-
-        for only_job in self.only_jobs:
-            try:
-                job = self.connection.get_job_info(only_job)
-                matched_jobs.append(job)
-            except jenkins.JenkinsException:
-                continue
-
-        if len(matched_jobs) >= 1:
-            return matched_jobs
-
-        for job in self.connection.get_jobs():
-            keep = False
-            # Regex check
-            for regex in self.regex_ignore_jobs:
-                if re.search(regex, job['name']):
-                    keep = True
-                    break
-
-            # Static check
-            for ignore_job in self.ignore_jobs:
-                if ignore_job == job['name']:
-                    keep = True
-                    break
-
-            if not keep:
-                matched_jobs.append(job)
-
-        return matched_jobs
+        return self.connection.get_job_info_regex(self.regex)
 
     def sort_jobs_by_days_since_last_build(self):
         """Sort jobs based on days since last build."""
@@ -191,37 +130,13 @@ class ScrubJobs:
 @click.argument("jenkins-url", nargs=1)
 @click.argument("jenkins-username", nargs=1)
 @click.argument("jenkins-password", nargs=1)
-@click.option(
-    "--config-file",
-    default=constants.CONFIG_FILE,
-    help="Configuration file",
-    required=False,
-    callback=click_callbacks.ClickFileExist.validate
-)
+@click.argument("regex", nargs=1)
 @click.option(
     "--dry-run",
     default=constants.DRY_RUN,
     help="Simulates the actions that would be taken",
     required=False,
     is_flag=True
-)
-@click.option(
-    "--ignore-job",
-    help="Filter to ignore job",
-    required=False,
-    multiple=True
-)
-@click.option(
-    "--job",
-    help="Filter to only analyze this job (overrides all filters)",
-    required=False,
-    multiple=True
-)
-@click.option(
-    "--regex-ignore-job",
-    help="Filter to ignore jobs matching regex",
-    required=False,
-    multiple=True
 )
 @click.option(
     "--max-days",
@@ -236,20 +151,17 @@ class ScrubJobs:
     required=False,
     is_flag=True
 )
-def cli(jenkins_url, jenkins_username, jenkins_password, config_file, dry_run, ignore_job,
-        job, regex_ignore_job, max_days, ssl_verify):
+def cli(jenkins_url, jenkins_username, jenkins_password, regex, dry_run,
+        max_days, ssl_verify):
     """Scrub Jenkins Jobs"""
     scrub_jobs = ScrubJobs(
         jenkins_url,
         jenkins_username,
         jenkins_password,
+        regex,
         ssl_verify=ssl_verify,
         dry_run=dry_run,
-        max_days=max_days,
-        regex_ignore_jobs=regex_ignore_job,
-        ignore_jobs=ignore_job,
-        config_file=config_file,
-        only_jobs=job
+        max_days=max_days
     )
 
     if dry_run:
